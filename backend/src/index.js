@@ -60,6 +60,18 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Evento: Admin abre una nueva ventanilla
+  socket.on("add_server", () => {
+    queueSystem.addServer();
+    io.emit("queue_update", queueSystem.getMetrics());
+  });
+
+  // Evento: Admin cierra una ventanilla
+  socket.on("remove_server", () => {
+    queueSystem.removeServer();
+    io.emit("queue_update", queueSystem.getMetrics());
+  });
+
   socket.on("disconnect", () => {
     console.log(`Cliente desconectado: ${socket.id}`);
   });

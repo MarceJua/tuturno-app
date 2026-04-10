@@ -65,7 +65,62 @@ class QueueSystem {
     return wqHours * 60; // Convertir de horas a minutos
   }
 
+  // SISTEMA DE ALERTAS GERENCIALES ---
+  checkServerAlerts() {
+    const wq = this.getWqMinutes();
+    const rho = this.getUtilization() * 100;
+    let alert = null;
+
+    // 1. Nivel CRITICO: > 30 min (Perdiendo casi el 80% de los clientes)
+    if (wq >= 30) {
+      alert = {
+        type: "CRITICAL",
+        message: `🚨 CRÍTICO: Espera de ${wq.toFixed(1)} min. ¡Casi el 80% de los clientes podrían abandonar! Abrir cajas urgente.`,
+        action: "ADD_SERVER",
+      };
+    }
+    // 2. Nivel PELIGRO: > 20 min (Perdiendo el 50% de los clientes)
+    else if (wq >= 20) {
+      alert = {
+        type: "DANGER",
+        message: `🔥 PELIGRO: Espera de ${wq.toFixed(1)} min. La mitad de los clientes superó su límite de tolerancia.`,
+        action: "ADD_SERVER",
+      };
+    }
+    // 3. Nivel ADVERTENCIA: > 10 min (Perdiendo al 15.6% más impaciente)
+    else if (wq >= 10) {
+      alert = {
+        type: "WARNING",
+        message: `⚡ ADVERTENCIA: Espera de ${wq.toFixed(1)} min. El primer grupo de clientes está perdiendo la paciencia.`,
+        action: "ADD_SERVER",
+      };
+    }
+    // 4. Nivel OCIOSO: Mantener costos bajos
+    else if (wq <= 2 && rho <= 40 && this.servers > 1) {
+      alert = {
+        type: "INFO",
+        message: `ℹ️ Capacidad ociosa. Utilización: ${rho.toFixed(1)}%. Se recomienda cerrar 1 ventanilla para ahorrar costos.`,
+        action: "REMOVE_SERVER",
+      };
+    }
+
+    return alert;
+  }
+
   // Metodos operativos del negocio
+  addServer() {
+    this.servers++;
+    return this.servers;
+  }
+
+  removeServer() {
+    if (this.servers > 1) {
+      this.servers--;
+    }
+
+    return this.servers;
+  }
+
   generateTicket() {
     this.ticketCounter++;
     const ticketId = `A-${this.ticketCounter.toString().padStart(3, "0")}`;
@@ -98,6 +153,7 @@ class QueueSystem {
       avgWaitTimeMinutes: this.getWqMinutes().toFixed(2),
       peopleInQueue: this.queue.length,
       activeTickets: this.queue,
+      systemAlert: this.checkServerAlerts(),
     };
   }
 }
