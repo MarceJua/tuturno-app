@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuTurno - Pruebas de Escalabilidad</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { display: flex; gap: 20px; }
+        .panel { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metrics { background: #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        
+        /* Estilos para el sistema de alertas */
+        /* Estilos para el sistema de alertas escalonado */
+        #alert-box { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; display: none; }
+        .alert-info { background-color: #e0f2fe; color: #1e3a8a; border: 1px solid #7dd3fc; }
+        .alert-warning { background-color: #fef08a; color: #9a3412; border: 1px solid #fde047; } /* Amarillo */
+        .alert-danger { background-color: #fecaca; color: #991b1b; border: 1px solid #f87171; } /* Naranja/Rojo claro */
+        .alert-critical { background-color: #7f1d1d; color: #fecaca; border: 1px solid #450a0a; } /* Rojo oscuro / Letras claras */
+
+        button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; margin-right: 5px; margin-bottom: 5px;}
+        .btn-client { background-color: #3b82f6; }
+        .btn-admin { background-color: #10b981; }
+        .btn-server-add { background-color: #f59e0b; }
+        .btn-server-remove { background-color: #ef4444; }
+        
+        .ticket-display { font-size: 24px; font-weight: bold; margin-top: 10px; color: #333; }
+        .server-count { font-size: 18px; font-weight: bold; color: #4f46e5; }
+
+        
+    </style>
+</head>
+<body>
+
+    <h1>Tablero de Pruebas - TuTurno</h1>
+    
+    <div id="alert-box"></div>
+
+    <div class="metrics">
+        <h3>Metricas en Tiempo Real (Motor M/M/c)</h3>
+        <p>Cajeros Activos (c): <span class="server-count" id="val-servers">3</span></p>
+        <p>Personas en fila: <span id="val-queue">0</span></p>
+        <p>Tiempo de espera estimado (Wq): <span id="val-wait">0</span> min</p>
+        <p>Utilizacion del sistema (rho): <span id="val-utilization">0</span>%</p>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Vista Cliente</h2>
+            <p>Simula a un usuario escaneando el QR.</p>
+            <button class="btn-client" id="btn-pedir">Pedir Turno</button>
+            <div style="margin-top: 20px;">
+                <p>Mi Turno es:</p>
+                <div class="ticket-display" id="mi-turno">---</div>
+                <p>Me atienden en aprox: <span id="mi-espera">0</span> min</p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Vista Administrador / Cajero</h2>
+            
+            <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #ccc;">
+                <p><strong>Control de Ventanillas</strong></p>
+                <button class="btn-server-add" id="btn-add-server">+ Abrir Ventanilla</button>
+                <button class="btn-server-remove" id="btn-remove-server">- Cerrar Ventanilla</button>
+            </div>
+
+            <p>Atender al siguiente cliente:</p>
+            <button class="btn-admin" id="btn-llamar">Llamar Siguiente</button>
+            <div style="margin-top: 20px;">
+                <p>Pasar a ventanilla:</p>
+                <div class="ticket-display" id="turno-llamado">---</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+
+        const valServers = document.getElementById('val-servers');
+        const valQueue = document.getElementById('val-queue');
+        const valWait = document.getElementById('val-wait');
+        const valUtilization = document.getElementById('val-utilization');
+        const miTurno = document.getElementById('mi-turno');
+        const miEspera = document.getElementById('mi-espera');
+        const turnoLlamado = document.getElementById('turno-llamado');
+        const alertBox = document.getElementById('alert-box');
+
+        // TRUCO: Desbloquear el audio del navegador con el primer clic
+        let audioDesbloqueado = false;
+        document.body.addEventListener('click', () => {
+            if (!audioDesbloqueado) {
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+                audioDesbloqueado = true;
+            }
+        });
+
+        // Actualizar la interfaz con las metricas
+        socket.on('queue_update', (metrics) => {
+            valServers.innerText = metrics.servers;
+            valQueue.innerText = metrics.peopleInQueue;
+            
+            // Mostrar "Infinito" si el sistema colapsa
+            valWait.innerText = metrics.avgWaitTimeMinutes === "Infinity" ? "∞" : metrics.avgWaitTimeMinutes;
+            valUtilization.innerText = metrics.utilizationPercentage;
+
+            // Manejo del sistema de alertas escalonadas
+            if (metrics.systemAlert !== null) {
+                alertBox.style.display = 'block';
+                alertBox.innerText = metrics.systemAlert.message;
+                
+                if (metrics.systemAlert.type === 'CRITICAL') {
+                    alertBox.className = 'alert-critical';
+                } else if (metrics.systemAlert.type === 'DANGER') {
+                    alertBox.className = 'alert-danger';
+                } else if (metrics.systemAlert.type === 'WARNING') {
+                    alertBox.className = 'alert-warning';
+                } else if (metrics.systemAlert.type === 'INFO') {
+                    alertBox.className = 'alert-info';
+                }
+            } else {
+                alertBox.style.display = 'none';
+            }
+        });
+
+        socket.on('ticket_assigned', (ticket) => {
+            miTurno.innerText = ticket.id;
+            miEspera.innerText = ticket.estimatedWaitMinutes;
+        });
+
+        socket.on('ticket_called', (ticket) => {
+            turnoLlamado.innerText = ticket.id;
+            
+            if (audioDesbloqueado) {
+                const mensaje = new SpeechSynthesisUtterance(`Turno ${ticket.id}, pasar a ventanilla`);
+                mensaje.lang = 'es-ES';
+                mensaje.rate = 0.9;
+                window.speechSynthesis.speak(mensaje);
+            } else {
+                console.warn("Haz clic en la pagina para habilitar el audio.");
+            }
+        });
+
+        // Botones de accion
+        document.getElementById('btn-pedir').addEventListener('click', () => { socket.emit('request_ticket'); });
+        document.getElementById('btn-llamar').addEventListener('click', () => { socket.emit('call_next'); });
+        document.getElementById('btn-add-server').addEventListener('click', () => { socket.emit('add_server'); });
+        document.getElementById('btn-remove-server').addEventListener('click', () => { socket.emit('remove_server'); });
+    </script>
+</body>
+</html>
