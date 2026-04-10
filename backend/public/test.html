@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuTurno - Pruebas de Socket</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { display: flex; gap: 20px; }
+        .panel { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .metrics { background: #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        button { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-client { background-color: #3b82f6; }
+        .btn-admin { background-color: #10b981; }
+        .ticket-display { font-size: 24px; font-weight: bold; margin-top: 10px; color: #333; }
+    </style>
+</head>
+<body>
+
+    <h1>Tablero de Pruebas - TuTurno</h1>
+    
+    <div class="metrics">
+        <h3>Metricas en Tiempo Real (Motor M/M/c)</h3>
+        <p>Personas en fila: <span id="val-queue">0</span></p>
+        <p>Tiempo de espera estimado (Wq): <span id="val-wait">0</span> min</p>
+        <p>Utilizacion del sistema (rho): <span id="val-utilization">0</span>%</p>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Vista Cliente</h2>
+            <p>Simula a un usuario escaneando el QR.</p>
+            <button class="btn-client" id="btn-pedir">Pedir Turno</button>
+            <div style="margin-top: 20px;">
+                <p>Mi Turno es:</p>
+                <div class="ticket-display" id="mi-turno">---</div>
+                <p>Me atienden en aprox: <span id="mi-espera">0</span> min</p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Vista Administrador / Cajero</h2>
+            <p>Simula al cajero llamando a la siguiente persona.</p>
+            <button class="btn-admin" id="btn-llamar">Llamar Siguiente</button>
+            <div style="margin-top: 20px;">
+                <p>Pasar a ventanilla:</p>
+                <div class="ticket-display" id="turno-llamado">---</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        // Conectar al backend local
+        const socket = io('http://localhost:3000');
+
+        // Referencias a los elementos del DOM
+        const valQueue = document.getElementById('val-queue');
+        const valWait = document.getElementById('val-wait');
+        const valUtilization = document.getElementById('val-utilization');
+        const miTurno = document.getElementById('mi-turno');
+        const miEspera = document.getElementById('mi-espera');
+        const turnoLlamado = document.getElementById('turno-llamado');
+
+        // EVENTOS DE ESCUCHA (Lo que recibimos del servidor)
+
+        // 1. Cuando la fila se actualiza
+        socket.on('queue_update', (metrics) => {
+            valQueue.innerText = metrics.peopleInQueue;
+            valWait.innerText = metrics.avgWaitTimeMinutes;
+            valUtilization.innerText = metrics.utilizationPercentage;
+        });
+
+        // 2. Cuando me asignan un turno (solo lo veo yo)
+        socket.on('ticket_assigned', (ticket) => {
+            miTurno.innerText = ticket.id;
+            miEspera.innerText = ticket.estimatedWaitMinutes;
+        });
+
+        // 3. Cuando el admin llama un turno (lo ven todos)
+        socket.on('ticket_called', (ticket) => {
+            turnoLlamado.innerText = ticket.id;
+            
+            // Opcional: Probar el Text-to-Speech nativo del navegador
+            const mensaje = new SpeechSynthesisUtterance(`Turno ${ticket.id}, pasar a ventanilla`);
+            mensaje.lang = 'es-ES';
+            window.speechSynthesis.speak(mensaje);
+        });
+
+        // EVENTOS DE EMISION (Lo que enviamos al servidor)
+
+        document.getElementById('btn-pedir').addEventListener('click', () => {
+            socket.emit('request_ticket');
+        });
+
+        document.getElementById('btn-llamar').addEventListener('click', () => {
+            socket.emit('call_next');
+        });
+    </script>
+</body>
+</html>
