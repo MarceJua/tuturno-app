@@ -3,23 +3,21 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 
-// Inicializar Express
+// Importar nuestro motor de colas
+const queueSystem = require("./queue");
+
 const app = express();
-// Envolver Express con el servidor HTTP nativo de Node (necesario para Socket.io)
 const server = http.createServer(app);
 
-// Configuración de seguridad CORS
 app.use(
   cors({
-    origin: "*", // En desarrollo permitimos todo. En prod, aquí irá "https://tuturno.lat"
+    origin: "*",
     methods: ["GET", "POST"],
   }),
 );
 
-// Middleware para poder leer JSON en las peticiones POST
 app.use(express.json());
 
-// Inicializar el motor de Sockets
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -27,29 +25,49 @@ const io = new Server(server, {
   },
 });
 
-// Escuchar conexiones de clientes en tiempo real
-io.on("connection", (socket) => {
-  console.log(` Nuevo cliente conectado: ${socket.id}`);
+// Rutas REST (para que el frontend consulte el estado inicial)
+app.get("/api/metrics", (req, res) => {
+  res.json(queueSystem.getMetrics());
+});
 
-  // Aquí agregaremos los eventos más adelante (ej. 'llamar_siguiente_turno')
+// Comunicacion en tiempo real con WebSockets
+io.on("connection", (socket) => {
+  console.log(`Nuevo cliente conectado: ${socket.id}`);
+
+  // Enviar el estado actual apenas alguien se conecta
+  socket.emit("queue_update", queueSystem.getMetrics());
+
+  // Evento: Cliente pide un turno nuevo
+  socket.on("request_ticket", () => {
+    const newTicket = queueSystem.generateTicket();
+
+    // Responderle solo al cliente que lo pidio con su ticket
+    socket.emit("ticket_assigned", newTicket);
+
+    // Avisarle a TODOS los conectados que la fila se actualizo
+    io.emit("queue_update", queueSystem.getMetrics());
+  });
+
+  // Evento: Administrador llama al siguiente turno
+  socket.on("call_next", () => {
+    const calledTicket = queueSystem.callNext();
+
+    if (calledTicket) {
+      // Avisar a todos cual es el ticket que debe pasar a ventanilla
+      io.emit("ticket_called", calledTicket);
+      // Actualizar las metricas de la fila para todos
+      io.emit("queue_update", queueSystem.getMetrics());
+    }
+  });
 
   socket.on("disconnect", () => {
-    console.log(` Cliente desconectado: ${socket.id}`);
+    console.log(`Cliente desconectado: ${socket.id}`);
   });
 });
 
-// Ruta REST de prueba
-app.get("/api/status", (req, res) => {
-  res.json({
-    mensaje: "API de TuTurno funcionando correctamente",
-    estado: "OK",
-  });
-});
-
-// Definir el puerto y arrancar
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`=========================================`);
+  console.log("=========================================");
   console.log(`Servidor corriendo en el puerto ${PORT}`);
-  console.log(`=========================================`);
+  console.log("=========================================");
 });
