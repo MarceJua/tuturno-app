@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
 import './App.css'
 
+// Personalizable por cliente
+const CLIENT_NAME = 'TuTurno'
+
 function App() {
   const [status, setStatus] = useState('idle')
   const [myTicket, setMyTicket] = useState(null)
@@ -11,12 +14,10 @@ function App() {
   const myTicketRef = useRef(null)
   const audioUnlockedRef = useRef(false)
 
-  // Keep ref in sync with state to avoid stale closure in socket listeners
   useEffect(() => {
     myTicketRef.current = myTicket
   }, [myTicket])
 
-  // Socket lifecycle — connect once on mount, disconnect on unmount
   useEffect(() => {
     const backendUrl = window.location.hostname === 'localhost'
       ? 'http://localhost:3000'
@@ -31,14 +32,14 @@ function App() {
 
     socket.on('ticket_called', (ticket) => {
       if (myTicketRef.current && ticket.id === myTicketRef.current.id) {
+        setMyTicket(prev => ({ ...prev, windowNumber: ticket.windowNumber }))
         setStatus('called')
-        speakTicket(ticket.id)
+        speakTicket(ticket.id, ticket.windowNumber)
       }
     })
 
     socket.on('queue_update', (metrics) => {
       setQueueInfo(metrics)
-      // Recalcular tiempo estimado individual según posición actual en la cola
       if (myTicketRef.current && metrics.activeTickets) {
         const pos = metrics.activeTickets.findIndex(t => t.id === myTicketRef.current.id)
         if (pos !== -1) {
@@ -49,13 +50,10 @@ function App() {
       }
     })
 
-    return () => {
-      socket.disconnect()
-    }
+    return () => socket.disconnect()
   }, [])
 
   function handlePedirTurno() {
-    // Unlock Web Speech API on first real user gesture (browser requirement)
     if (!audioUnlockedRef.current) {
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(''))
       audioUnlockedRef.current = true
@@ -64,184 +62,175 @@ function App() {
     socketRef.current.emit('request_ticket')
   }
 
-  function speakTicket(ticketId) {
+  function speakTicket(ticketId, windowNumber) {
     if (!audioUnlockedRef.current) return
     window.speechSynthesis.cancel()
+    const windowText = windowNumber ? `, ventanilla ${windowNumber}` : ', pasar a ventanilla'
     const utterance = new SpeechSynthesisUtterance(
-      `Turno ${ticketId}, pasar a ventanilla`
+      `Turno ${ticketId}${windowText}`
     )
     utterance.rate = 0.9
-
-    // Preferir voz en español latinoamericano, con fallback a cualquier español
     const voices = window.speechSynthesis.getVoices()
     const preferred = ['es-GT', 'es-419', 'es-MX', 'es-US', 'es-CO', 'es-AR']
     const voice =
       preferred.reduce((found, lang) =>
         found || voices.find(v => v.lang === lang), null
       ) || voices.find(v => v.lang.startsWith('es'))
-
     if (voice) {
       utterance.voice = voice
       utterance.lang = voice.lang
     } else {
       utterance.lang = 'es-MX'
     }
-
     window.speechSynthesis.speak(utterance)
   }
 
   return (
     <main className={`app app--${status}`}>
-      {/* Ambient background orb */}
-      <div className="app__orb" aria-hidden="true" />
 
-      {/* Header — always visible */}
-      <header className="app__header">
-        <div className="app__logo">
-          <span className="app__logo-mark">T</span>
-          <span className="app__logo-text">TuTurno</span>
-        </div>
-        <p className="app__tagline">Colas más cortas, servicio más inteligente</p>
-      </header>
-
-      {/* ─── IDLE STATE ─── */}
+      {/* ─── IDLE ─── */}
       {status === 'idle' && (
-        <section className="state state--idle" key="idle">
-          <div className="idle__illustration" aria-hidden="true">
-            <div className="idle__ring idle__ring--1" />
-            <div className="idle__ring idle__ring--2" />
-            <div className="idle__ring idle__ring--3" />
-            <span className="idle__icon">◈</span>
-          </div>
+        <div className="screen screen--idle">
+          <header className="wordmark" aria-label="TuTurno">
+            <img src="/favicon.png" className="wordmark__logo" alt="" aria-hidden="true" />
+            <span className="wordmark__text">TuTurno</span>
+          </header>
 
-          <div className="idle__copy">
-            <h2 className="idle__headline">Su turno digital,<br />sin filas de papel.</h2>
-            <p className="idle__sub">
-              Toque el botón para recibir su número de turno y esperar donde prefiera.
-            </p>
-          </div>
-
-          {queueInfo && (
-            <div className="idle__stats">
-              <div className="idle__stat">
-                <span className="idle__stat-value">{queueInfo.peopleInQueue}</span>
-                <span className="idle__stat-label">en espera</span>
-              </div>
-              <div className="idle__stat-divider" />
-              <div className="idle__stat">
-                <span className="idle__stat-value">
-                  {isFinite(parseFloat(queueInfo.avgWaitTimeMinutes))
-                    ? `~${Math.ceil(parseFloat(queueInfo.avgWaitTimeMinutes))} min`
-                    : '—'}
-                </span>
-                <span className="idle__stat-label">tiempo estimado</span>
-              </div>
-              <div className="idle__stat-divider" />
-              <div className="idle__stat">
-                <span className="idle__stat-value">{queueInfo.servers}</span>
-                <span className="idle__stat-label">ventanillas</span>
-              </div>
+          <div className="idle__body">
+            {/* Ícono representativo de cola/turno */}
+            <div className="idle__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
             </div>
-          )}
 
-          <button
-            className="btn-primary"
-            onClick={handlePedirTurno}
-            aria-label="Solicitar número de turno"
-          >
-            Pedir Turno
-          </button>
-        </section>
-      )}
+            <p className="idle__heading">
+              Bienvenido a<br /><span>{CLIENT_NAME}</span>
+            </p>
 
-      {/* ─── WAITING STATE ─── */}
-      {status === 'waiting' && (
-        <section className="state state--waiting" key="waiting">
-          <div className="waiting__spinner" aria-hidden="true">
-            <div className="waiting__ring" />
-            <div className="waiting__dot" />
-          </div>
-          <p className="waiting__text">Asignando su turno</p>
-          <p className="waiting__sub">Un momento, por favor…</p>
-        </section>
-      )}
-
-      {/* ─── ASSIGNED STATE ─── */}
-      {status === 'assigned' && myTicket && (
-        <section className="state state--assigned" key="assigned">
-          <p className="ticket__label">Su número de turno</p>
-
-          <div className="ticket__card">
-            <div className="ticket__card-inner">
-              <div className="ticket__number" aria-live="polite">
-                {myTicket.id}
-              </div>
-              <div className="ticket__divider">
-                <span />
-                <span className="ticket__divider-circle" />
-                <span />
-              </div>
-              <div className="ticket__meta">
-                <div className="ticket__meta-item">
-                  <span className="ticket__meta-value">
-                    {isFinite(parseFloat(myTicket.estimatedWaitMinutes))
-                      ? `~${Math.ceil(parseFloat(myTicket.estimatedWaitMinutes))} min`
-                      : 'pronto'}
-                  </span>
-                  <span className="ticket__meta-label">espera estimada</span>
-                </div>
-                {queueInfo && (
-                  <div className="ticket__meta-item">
-                    <span className="ticket__meta-value">{queueInfo.peopleInQueue}</span>
-                    <span className="ticket__meta-label">personas antes</span>
-                  </div>
+            {queueInfo && (
+              <div className="idle__pill" aria-live="polite">
+                <span className="idle__pill-dot" aria-hidden="true" />
+                <span>
+                  {queueInfo.peopleInQueue === 0
+                    ? 'Sin espera ahora'
+                    : `${queueInfo.peopleInQueue} ${queueInfo.peopleInQueue === 1 ? 'persona' : 'personas'} en espera`}
+                </span>
+                {isFinite(parseFloat(queueInfo.avgWaitTimeMinutes)) && queueInfo.peopleInQueue > 0 && (
+                  <>
+                    <span className="idle__pill-sep" aria-hidden="true">·</span>
+                    <span>~{Math.ceil(parseFloat(queueInfo.avgWaitTimeMinutes))} min</span>
+                  </>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
-          <p className="assigned__hint">
-            Le avisaremos aquí cuando sea su turno.
-          </p>
-        </section>
+          <div className="idle__cta-zone">
+            <p className="idle__hint">Toque para obtener su número de turno</p>
+            <button
+              className="btn-cta"
+              onClick={handlePedirTurno}
+              aria-label="Solicitar número de turno"
+            >
+              Pedir Turno
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* ─── CALLED STATE ─── */}
-      {status === 'called' && myTicket && (
-        <section className="state state--called" key="called">
-          <div className="called__banner" role="alert" aria-live="assertive">
-            <span className="called__banner-pulse" aria-hidden="true" />
-            <span className="called__banner-text">Es su turno</span>
-          </div>
+      {/* ─── WAITING ─── */}
+      {status === 'waiting' && (
+        <div className="screen screen--waiting" aria-live="polite">
+          <div className="waiting__spinner" aria-hidden="true" />
+          <p className="waiting__label">Asignando tu turno…</p>
+        </div>
+      )}
 
-          <p className="ticket__label ticket__label--called">Su número de turno</p>
+      {/* ─── ASSIGNED ─── */}
+      {status === 'assigned' && myTicket && (
+        <div className="screen screen--assigned">
+          <header className="wordmark wordmark--sm" aria-label="TuTurno">
+            <img src="/favicon.png" className="wordmark__logo" alt="" aria-hidden="true" />
+            <span className="wordmark__text">TuTurno</span>
+          </header>
 
-          <div className="ticket__card ticket__card--called">
-            <div className="ticket__card-inner">
-              <div className="ticket__number ticket__number--called" aria-live="assertive">
-                {myTicket.id}
+          <div className="assigned__body">
+            <div className="assigned__badge">
+              <span className="assigned__badge-dot" aria-hidden="true" />
+              En cola
+            </div>
+
+            <p className="assigned__eyebrow">Su número de turno</p>
+            <p className="assigned__number" aria-live="polite" aria-atomic="true">
+              {myTicket.id}
+            </p>
+
+            <div className="assigned__row">
+              <div className="assigned__stat assigned__stat--highlight">
+                <span className="assigned__stat-icon" aria-hidden="true">⏱</span>
+                <span className="assigned__stat-value">
+                  {isFinite(parseFloat(myTicket.estimatedWaitMinutes))
+                    ? `~${Math.ceil(parseFloat(myTicket.estimatedWaitMinutes))} min`
+                    : '—'}
+                </span>
+                <span className="assigned__stat-label">Espera est.</span>
               </div>
-              <div className="ticket__divider">
-                <span />
-                <span className="ticket__divider-circle" />
-                <span />
-              </div>
-              <div className="ticket__meta">
-                <div className="ticket__meta-item ticket__meta-item--full">
-                  <span className="ticket__meta-value called__instruction">
-                    Pase a ventanilla
-                  </span>
+              {queueInfo && (
+                <div className="assigned__stat">
+                  <span className="assigned__stat-icon" aria-hidden="true">👥</span>
+                  <span className="assigned__stat-value">{queueInfo.peopleInQueue}</span>
+                  <span className="assigned__stat-label">En cola</span>
                 </div>
-              </div>
+              )}
+              {queueInfo && (
+                <div className="assigned__stat">
+                  <span className="assigned__stat-icon" aria-hidden="true">🏦</span>
+                  <span className="assigned__stat-value">{queueInfo.servers}</span>
+                  <span className="assigned__stat-label">Ventanillas</span>
+                </div>
+              )}
+            </div>
+
+            {/* Barra de progreso animada — señal visual de que el sistema está activo */}
+            <div className="assigned__progress" aria-hidden="true">
+              <div className="assigned__progress-fill" />
             </div>
           </div>
-        </section>
+
+          <p className="assigned__footer">
+            Le avisaremos cuando sea tu turno
+          </p>
+        </div>
       )}
 
-      {/* Footer */}
-      <footer className="app__footer">
-        <span>TuTurno · Sistema M/M/c</span>
-      </footer>
+      {/* ─── CALLED ─── */}
+      {status === 'called' && myTicket && (
+        <div className="screen screen--called" role="alert" aria-live="assertive" aria-atomic="true">
+          <div className="called__top">
+            {/* Ícono de campana */}
+            <div className="called__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+            </div>
+            <p className="called__label">Pase a ventanilla</p>
+          </div>
+          <p className="called__number">{myTicket.id}</p>
+          {myTicket.windowNumber && (
+            <div className="called__window">
+              <span className="called__window-label">Ventanilla</span>
+              <span className="called__window-number">{myTicket.windowNumber}</span>
+            </div>
+          )}
+          <div className="called__divider" aria-hidden="true" />
+        </div>
+      )}
+
     </main>
   )
 }

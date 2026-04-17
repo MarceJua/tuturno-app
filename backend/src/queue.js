@@ -17,6 +17,7 @@ class QueueSystem {
 
     this.queue = []; // Arreglo en memoria para los turnos activos
     this.ticketCounter = 0;
+    this.lastServerUsed = 0; // Para rotación round-robin de ventanillas
   }
 
   // 1. Factor de utilizacion (rho)
@@ -141,7 +142,11 @@ class QueueSystem {
 
   callNext() {
     if (this.queue.length === 0) return null;
-    return this.queue.shift(); // Saca y retorna el primer turno de la fila
+    const ticket = this.queue.shift();
+    // Asignar ventanilla en round-robin
+    this.lastServerUsed = (this.lastServerUsed % this.servers) + 1;
+    ticket.windowNumber = this.lastServerUsed;
+    return ticket;
   }
 
   getMetrics() {
