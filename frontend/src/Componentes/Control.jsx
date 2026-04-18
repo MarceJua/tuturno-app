@@ -2,35 +2,32 @@ import socket from "../Services/Socket";
 
 export default function AdminPanel({ currentTicket }) {
   return (
-    <div className="card shadow p-4">
-      <h4 className="text-success mb-3">🧑‍💼 Administrador</h4>
-
-      <div className="d-flex gap-2 mb-3">
+    <div className="row text-center">
+      <div className="row text-center">
+       <h4>🧑‍💼 Administrador</h4>
         <button
-          className="btn btn-warning w-50"
-          onClick={() => socket.emit("add_server")}
-        >
-          + Abrir
+              className="btn btn-warning w-100 mb-2"
+              onClick={() => socket.emit("add_server")}
+            >
+              ➕ Abrir Ventanilla
         </button>
 
         <button
-          className="btn btn-danger w-50"
-          onClick={() => socket.emit("remove_server")}
-        >
-          - Cerrar
+              className="btn btn-primary w-100 mb-3"
+              onClick={() => socket.emit("remove_server")}
+            >
+              ➖ Cerrar Ventanilla
         </button>
-      </div>
 
       <button
-        className="btn btn-success w-100 mb-3"
-        onClick={() => socket.emit("call_next")}
-      >
-        Llamar Siguiente
+              className="btn btn-success w-100 mb-3"
+              onClick={() => socket.emit("call_next")}
+            >
+              📢 Llamar Siguiente
       </button>
 
-      <div className="text-center">
         <p>Turno actual:</p>
-        <h2>{currentTicket || "---"}</h2>
+        <h1 style={{color:"#0a1f44", fontWeight:"bold"}}>{currentTicket || "---"}</h1>
       </div>
     </div>
   );
