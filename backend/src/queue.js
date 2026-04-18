@@ -1,3 +1,5 @@
+const {pool} = require("../BaseDatos/db")
+
 // Funciones auxiliares matematicas
 function factorial(n) {
   if (n === 0 || n === 1) return 1;
@@ -15,6 +17,7 @@ class QueueSystem {
     this.mu = 20; // Tasa de servicio (clientes/hora)
     this.servers = 3; // Numero de cajeros (c)
 
+  
     this.queue = []; // Arreglo en memoria para los turnos activos
     this.ticketCounter = 0;
   }
@@ -121,41 +124,82 @@ class QueueSystem {
     return this.servers;
   }
 
-  generateTicket() {
-    this.ticketCounter++;
-    const ticketId = `A-${this.ticketCounter.toString().padStart(3, "0")}`;
-    const estimatedWait = this.getWqMinutes();
+async initCounter() {
+  const result = await pool.query(`
+    SELECT ticket_number
+    FROM tickets
+    ORDER BY id DESC
+    LIMIT 1
+  `);
 
-    const newTicket = {
-      id: ticketId,
-      timestamp: new Date().toISOString(),
-      // Calculo estimado: Wq base * posicion en la cola (simplificacion para UX)
-      estimatedWaitMinutes: (estimatedWait * (this.queue.length + 1)).toFixed(
-        2,
-      ),
-    };
+  if (result.rows.length === 0) {
+    this.ticketCounter = 0;
+  } else {
+    const lastTicket = result.rows[0].ticket_number;
+    const number = parseInt(lastTicket.split("-")[1]);
 
-    this.queue.push(newTicket);
-    return newTicket;
+    this.ticketCounter = number;
   }
+}
 
-  callNext() {
-    if (this.queue.length === 0) return null;
-    return this.queue.shift(); // Saca y retorna el primer turno de la fila
-  }
 
-  getMetrics() {
-    return {
+async generateTicket() {
+  this.ticketCounter++;
+
+  const ticketId = `A-${this.ticketCounter.toString().padStart(3, "0")}`;
+
+  const result = await pool.query(
+    `INSERT INTO tickets (ticket_number)
+     VALUES ($1)
+     RETURNING *`,
+    [ticketId]
+  );
+
+  return {
+    id: result.rows[0].ticket_number,
+    estimatedWaitMinutes: this.getWqMinutes().toFixed(2),
+  };
+}
+
+async callNext() {
+  const result = await pool.query(`
+    UPDATE tickets
+    SET status = 'called',
+        called_at = NOW()
+    WHERE id = (
+      SELECT id FROM tickets
+      WHERE status = 'waiting'
+      ORDER BY created_at ASC
+      LIMIT 1
+    )
+    RETURNING *
+  `);
+
+  if (result.rows.length === 0) return null;
+
+  return {
+    id: result.rows[0].ticket_number,
+  };
+}
+
+  async getMetrics() {
+    const result = await pool.query(
+    `SELECT COUNT(*) FROM tickets WHERE status = 'waiting'`
+  );
+
+  const peopleInQueue = parseInt(result.rows[0].count);
+
+   return {
       lambda: this.lambda,
       mu: this.mu,
       servers: this.servers,
       utilizationPercentage: (this.getUtilization() * 100).toFixed(2),
       avgWaitTimeMinutes: this.getWqMinutes().toFixed(2),
-      peopleInQueue: this.queue.length,
+      peopleInQueue,
       activeTickets: this.queue,
       systemAlert: this.checkServerAlerts(),
     };
-  }
+}
 }
 
 module.exports = new QueueSystem();

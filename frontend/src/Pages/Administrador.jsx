@@ -3,6 +3,7 @@ import { useQueueSocket } from "../Hook/Queue";
 import Metrics from "../Componentes/Metricas";
 import AlertBanner from "../Componentes/Alertas";
 import AdminPanel from "../Componentes/Control";
+import ClientPanel from "../Componentes/Cliente";
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState({});
@@ -30,6 +31,7 @@ export default function Dashboard() {
       <Metrics data={metrics} />
         <div className="col-md-6">
           <AdminPanel currentTicket={currentTicket} />
+          <ClientPanel ticket={ticket}  currentTicket={currentTicket} />
         </div>
     </div>
   );
