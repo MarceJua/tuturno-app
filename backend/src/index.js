@@ -3,7 +3,28 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 
-// Importar nuestro motor de colas
+const { createDatabase } = require("../BaseDatos/setup")
+const { createTables } = require("../BaseDatos/Tablas.js");
+
+async function startServer() {
+  //Crear DB si no existe
+  await createDatabase();
+
+  //Crear tablas
+  await createTables();
+
+  //Iniciar contador
+  await queueSystem.initCounter();
+
+  //Levantar servidor
+  server.listen(3000, () => {
+    console.log("=========================================");
+    console.log("Servidor corriendo en el puerto 3000");
+    console.log("=========================================");
+  });
+}
+startServer();
+
 const queueSystem = require("./queue");
 
 const app = express();
@@ -39,48 +60,42 @@ io.on("connection", (socket) => {
   socket.emit("queue_update", queueSystem.getMetrics());
 
   // Evento: Cliente pide un turno nuevo
-  socket.on("request_ticket", () => {
-    const newTicket = queueSystem.generateTicket();
-
-    // Responderle solo al cliente que lo pidio con su ticket
-    socket.emit("ticket_assigned", newTicket);
+socket.on("request_ticket", async () => {
+  const result = await queueSystem.generateTicket()
+  socket.emit("ticket_assigned", result);
 
     // Avisarle a TODOS los conectados que la fila se actualizo
-    io.emit("queue_update", queueSystem.getMetrics());
+    const metrics = await queueSystem.getMetrics();
+    io.emit("queue_update", metrics);
   });
 
   // Evento: Administrador llama al siguiente turno
-  socket.on("call_next", () => {
-    const calledTicket = queueSystem.callNext();
+socket.on("call_next", async () => {
+  const result = await queueSystem.callNext()
 
-    if (calledTicket) {
-      // Avisar a todos cual es el ticket que debe pasar a ventanilla
-      io.emit("ticket_called", calledTicket);
-      // Actualizar las metricas de la fila para todos
-      io.emit("queue_update", queueSystem.getMetrics());
-    }
-  });
+  if (result) {
+  io.emit("ticket_called", result);
+}
+  const metrics = await queueSystem.getMetrics();
+
+  io.emit("queue_update", metrics); 
+});
 
   // Evento: Admin abre una nueva ventanilla
-  socket.on("add_server", () => {
+  socket.on("add_server", async () => {
     queueSystem.addServer();
-    io.emit("queue_update", queueSystem.getMetrics());
+    const metrics =await queueSystem.getMetrics()
+    io.emit("queue_update", metrics);
   });
 
   // Evento: Admin cierra una ventanilla
-  socket.on("remove_server", () => {
+  socket.on("remove_server", async () => {
     queueSystem.removeServer();
-    io.emit("queue_update", queueSystem.getMetrics());
+    const metrics =await queueSystem.getMetrics()
+    io.emit("queue_update", metrics);
   });
 
   socket.on("disconnect", () => {
     console.log(`Cliente desconectado: ${socket.id}`);
   });
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log("=========================================");
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
-  console.log("=========================================");
 });
