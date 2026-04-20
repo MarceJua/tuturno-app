@@ -1,0 +1,130 @@
+:root {
+  /* Identidad TuTurno — Guía UI/UX */
+  --primary:        #10B981; /* Verde esmeralda — sostenibilidad, progreso */
+  --primary-dark:   #059669;
+  --primary-bg:     rgba(16, 185, 129, 0.1);
+  --primary-border: rgba(16, 185, 129, 0.35);
+
+  --institution:    #1E3A8A; /* Azul institucional — seriedad, confianza */
+  --institution-mid:#2563EB;
+
+  --cta:            #F59E0B; /* Naranja CTA — alertas, acción principal */
+  --cta-dark:       #D97706;
+  --cta-bg:         rgba(245, 158, 11, 0.12);
+  --cta-border:     rgba(245, 158, 11, 0.4);
+
+  /* Semánticos reutilizados por App.css */
+  --accent:         var(--cta);
+  --accent-bg:      var(--cta-bg);
+  --accent-border:  var(--cta-border);
+
+  --text:    #6B7280;
+  --text-h:  #111827;
+  --bg:      #F9FAFB;
+  --border:  #E5E7EB;
+  --shadow:  rgba(0,0,0,0.08) 0 4px 16px -2px, rgba(0,0,0,0.04) 0 2px 6px -1px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary:        #34D399;
+    --primary-dark:   #10B981;
+    --primary-bg:     rgba(52, 211, 153, 0.12);
+    --primary-border: rgba(52, 211, 153, 0.3);
+
+    --institution:    #3B82F6;
+    --institution-mid:#60A5FA;
+
+    --cta:            #FBBF24;
+    --cta-dark:       #F59E0B;
+    --cta-bg:         rgba(251, 191, 36, 0.14);
+    --cta-border:     rgba(251, 191, 36, 0.35);
+
+    --accent:         var(--cta);
+    --accent-bg:      var(--cta-bg);
+    --accent-border:  var(--cta-border);
+
+    --text:    #9CA3AF;
+    --text-h:  #F9FAFB;
+    --bg:      #0F172A;
+    --border:  #1E293B;
+    --shadow:  rgba(0,0,0,0.5) 0 4px 16px -2px, rgba(0,0,0,0.3) 0 2px 6px -1px;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  width: 480px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}

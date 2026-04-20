@@ -1,0 +1,508 @@
+/*
+  TuTurno — Vista Cliente
+  Identidad visual: Verde esmeralda (progreso), Azul institucional (confianza),
+  Naranja CTA (alertas urgentes). Guía UI/UX TuTurno v1.
+*/
+
+/* ── Reset mínimo ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Contenedor raíz ── */
+.app {
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  font-family: 'Outfit', var(--sans);
+  transition: background 0.3s ease;
+}
+
+/* ── Screens ── */
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+}
+
+/* ─────────────────────────────────────────────
+   WORDMARK
+─────────────────────────────────────────────── */
+.wordmark {
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wordmark--sm {
+  padding: 16px 24px 0;
+}
+
+.wordmark__logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.wordmark__text {
+  font-family: 'Outfit', var(--sans);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--institution);
+  text-transform: uppercase;
+}
+
+@media (prefers-color-scheme: dark) {
+  .wordmark__text { color: var(--institution-mid); }
+}
+
+/* ─────────────────────────────────────────────
+   IDLE STATE
+─────────────────────────────────────────────── */
+.screen--idle {
+  justify-content: space-between;
+}
+
+.idle__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 24px;
+}
+
+/* Ilustración minimalista: ícono de cola */
+.idle__icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--primary-bg) 0%, rgba(30,58,138,0.08) 100%);
+  border: 1.5px solid var(--primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.idle__icon svg {
+  width: 36px;
+  height: 36px;
+  color: var(--primary);
+}
+
+.idle__heading {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.idle__heading span {
+  color: var(--primary);
+}
+
+/* Pill de estado de la cola */
+.idle__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--primary-bg);
+  border: 1px solid var(--primary-border);
+  border-radius: 100px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.idle__pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+  animation: dot-live 2s ease-in-out infinite;
+}
+
+@keyframes dot-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.8); }
+}
+
+.idle__pill-sep {
+  color: var(--border);
+}
+
+/* CTA zone — thumb zone */
+.idle__cta-zone {
+  padding: 16px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.idle__hint {
+  font-size: 14px;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Botón CTA principal ── */
+.btn-cta {
+  width: 100%;
+  height: 56px;
+  font-family: 'Outfit', var(--sans);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--cta) 0%, var(--cta-dark) 100%);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.2) inset,
+    0 4px 20px rgba(245, 158, 11, 0.45);
+  transition:
+    transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.btn-cta:active {
+  transform: scale(0.97);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.1) inset,
+    0 2px 10px rgba(245, 158, 11, 0.3);
+}
+
+.btn-cta:focus-visible {
+  outline: 3px solid var(--cta);
+  outline-offset: 3px;
+}
+
+/* ─────────────────────────────────────────────
+   WAITING STATE
+─────────────────────────────────────────────── */
+.screen--waiting {
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Spinner con colores institucionales */
+.waiting__spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.waiting__label {
+  font-size: 16px;
+  color: var(--text);
+  font-weight: 400;
+}
+
+/* ─────────────────────────────────────────────
+   ASSIGNED STATE
+─────────────────────────────────────────────── */
+.screen--assigned {
+  justify-content: space-between;
+}
+
+.assigned__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+}
+
+/* Badge "En cola" */
+.assigned__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-bg);
+  border: 1px solid var(--primary-border);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .assigned__badge { color: var(--primary); }
+}
+
+.assigned__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: dot-live 2s ease-in-out infinite;
+}
+
+.assigned__eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text);
+}
+
+/* EL número */
+.assigned__number {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(80px, 25vw, 112px);
+  font-weight: 400;
+  color: var(--institution);
+  line-height: 1;
+  letter-spacing: -3px;
+  text-align: center;
+  animation: number-stamp 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@media (prefers-color-scheme: dark) {
+  .assigned__number { color: var(--institution-mid); }
+}
+
+@keyframes number-stamp {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Stats row — métricas de rendimiento de la cola */
+.assigned__row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.assigned__stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 8px 12px;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.assigned__stat-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+
+.assigned__stat-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-h);
+  line-height: 1;
+}
+
+.assigned__stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Banda de progreso verde (decorativa — comunica "sistema activo") */
+.assigned__progress {
+  width: calc(100% - 48px);
+  height: 4px;
+  background: var(--border);
+  border-radius: 100px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+.assigned__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--institution-mid) 100%);
+  border-radius: 100px;
+  animation: progress-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.assigned__footer {
+  padding: 16px 24px 32px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────
+   CALLED STATE
+   La pantalla ENTERA cambia — naranja institucional, máxima urgencia.
+   Color naranja CTA (definido en guía para "Es tu turno").
+─────────────────────────────────────────────── */
+.screen--called {
+  background: linear-gradient(160deg, #D97706 0%, #F59E0B 60%, #FCD34D 100%);
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  animation: called-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes called-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.called__top {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Ícono de campana/alerta */
+.called__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: icon-bounce 0.6s cubic-bezier(0.34, 1.6, 0.64, 1) 0.2s both;
+}
+
+@keyframes icon-bounce {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.called__icon svg {
+  width: 28px;
+  height: 28px;
+  color: #fff;
+}
+
+.called__label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+/* Número enorme — legible desde lejos */
+.called__number {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(96px, 32vw, 140px);
+  font-weight: 400;
+  color: #fff;
+  line-height: 1;
+  letter-spacing: -3px;
+  text-align: center;
+  text-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  animation:
+    number-stamp 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) 0.1s both,
+    number-throb 1.8s ease-in-out 0.5s infinite;
+}
+
+@keyframes number-throb {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.9; transform: scale(1.02); }
+}
+
+.called__sub {
+  margin-top: 16px;
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  font-family: 'Outfit', var(--sans);
+  letter-spacing: 0.3px;
+}
+
+/* Tarjeta de ventanilla — el dato más accionable del estado called */
+.called__window {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 20px;
+  background: rgba(255,255,255,0.2);
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 16px;
+  padding: 14px 40px;
+  backdrop-filter: blur(8px);
+}
+
+.called__window-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.75);
+}
+
+.called__window-number {
+  font-family: 'Space Mono', monospace;
+  font-size: 48px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+/* Línea decorativa */
+.called__divider {
+  width: 48px;
+  height: 3px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 100px;
+  margin-top: 20px;
+}
