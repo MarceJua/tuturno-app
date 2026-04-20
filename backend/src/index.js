@@ -48,8 +48,8 @@ const io = new Server(server, {
 });
 
 // Rutas REST (para que el frontend consulte el estado inicial)
-app.get("/api/metrics", (req, res) => {
-  res.json(queueSystem.getMetrics());
+app.get("/api/metrics", async (req, res) => {
+  res.json(await queueSystem.getMetrics());
 });
 
 // Comunicacion en tiempo real con WebSockets
@@ -57,17 +57,18 @@ io.on("connection", (socket) => {
   console.log(`Nuevo cliente conectado: ${socket.id}`);
 
   // Enviar el estado actual apenas alguien se conecta
-  socket.emit("queue_update", queueSystem.getMetrics());
+  queueSystem.getMetrics().then(metrics => socket.emit("queue_update", metrics));
 
   // Evento: Cliente pide un turno nuevo
 socket.on("request_ticket", async () => {
   const result = await queueSystem.generateTicket()
-  socket.emit("ticket_assigned", result);
-
-    // Avisarle a TODOS los conectados que la fila se actualizo
-    const metrics = await queueSystem.getMetrics();
-    io.emit("queue_update", metrics);
-  });
+  const metrics = await queueSystem.getMetrics();
+  const pos = metrics.activeTickets.findIndex(t => t.id === result.id)
+  const wq = parseFloat(metrics.avgWaitTimeMinutes)
+  const estimatedWait = isFinite(wq) && pos !== -1 ? (wq * (pos + 1)).toFixed(2) : null
+  socket.emit("ticket_assigned", { ...result, estimatedWaitMinutes: estimatedWait });
+  io.emit("queue_update", metrics);
+});
 
   // Evento: Administrador llama al siguiente turno
 socket.on("call_next", async () => {

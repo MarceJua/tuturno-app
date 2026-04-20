@@ -186,20 +186,24 @@ async callNext() {
 }
 
   async getMetrics() {
-    const result = await pool.query(
-    `SELECT COUNT(*) FROM tickets WHERE status = 'waiting'`
-  );
+    const result = await pool.query(`
+      SELECT ticket_number AS id
+      FROM tickets
+      WHERE status = 'waiting'
+      ORDER BY created_at ASC
+    `);
 
-  const peopleInQueue = parseInt(result.rows[0].count);
+    const activeTickets = result.rows;
+    const peopleInQueue = activeTickets.length;
 
-   return {
+    return {
       lambda: this.lambda,
       mu: this.mu,
       servers: this.servers,
       utilizationPercentage: (this.getUtilization() * 100).toFixed(2),
       avgWaitTimeMinutes: this.getWqMinutes().toFixed(2),
       peopleInQueue,
-      activeTickets: this.queue,
+      activeTickets,
       systemAlert: this.checkServerAlerts(),
     };
 }
